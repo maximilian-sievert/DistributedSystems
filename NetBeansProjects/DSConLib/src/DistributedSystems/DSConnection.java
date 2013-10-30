@@ -84,34 +84,27 @@ public class DSConnection {
      * Throws IOException if no connection established or failure to obtain and use the Streams. Terminates the data with the required '\n' delimiter, flushes and closes the
      * stream.
      *
-     * @param data Byte array of data to send. (Possibly add length sanity checks?) TODO: how to handle empty or too large messages?
+     * @param data Byte array of data to send. (Possibly add length sanity checks?)
      * @throws IOException No valid connection established or error during sending procedure.
      */
+    private static final int Server_MaxLength=128*1024; //128 kByte according to assignment pdf
+
     public void send(byte[] data) throws IOException {
         if (m_Socket == null || m_Socket.isClosed() || !m_Socket.isConnected()) {
             throw new IOException("No connection established.");
         } else {
-            
-            if (data.length >128) {
-                System.out.println("ZU LANG");
-              byte[] trimdata = new byte[128];
-                    for ( int i = 0; i < trimdata.length; i++ )
-                    trimdata[i] = data[i] ;
             OutputStream s_out = m_Socket.getOutputStream();
-            s_out.write(trimdata);
-            s_out.write((byte) 13);
-            s_out.flush();
-            m_bytes_sent += data.length + 1;
-                    
+            if (data.length > Server_MaxLength) {
+                System.out.println("Message length exceeds server buffer, proceeding after trimming.");
+                byte[] trimdata = new byte[Server_MaxLength];
+                System.arraycopy(data, 0, trimdata, 0, trimdata.length);
+                data=trimdata;
             }
-            else {
-                 OutputStream s_out = m_Socket.getOutputStream();
+
             s_out.write(data);
             s_out.write((byte) 13);
             s_out.flush();
-            m_bytes_sent += data.length + 1;
-            }
-           
+            m_bytes_sent += data.length + 1; //counts trimmed
         }
     }
 
@@ -128,18 +121,16 @@ public class DSConnection {
             throw new IOException("No connection established.");
         }
         InputStream s_in = m_Socket.getInputStream();
-        ArrayList<Byte> messagebuffer = new ArrayList<Byte>();
+        ArrayList<Byte> messagebuffer = new ArrayList<>();
 
         int val;
         while ((val = s_in.read()) != -1) { //-1 : end of stream (possibly network issue?)
-            
-            if (val == 13 ) { //= '\n', message delimiter
-              break;
-            } 
-            else if (val == 10) {
-                
-            }
-            else {
+
+            if (val == 13) { //= '\n', message delimiter
+                break;
+            } else if (val == 10) {
+                //TODO: this removes all '\r' from every message, not only trailing delimiters
+            } else {
                 messagebuffer.add((byte) val);
             }
         }
