@@ -128,8 +128,6 @@ public class DSConnection {
 
             if (val == 13) { //= '\n', message delimiter
                 break;
-            } else if (val == 10) {
-                //TODO: this removes all '\r' from every message, not only trailing delimiters
             } else {
                 messagebuffer.add((byte) val);
             }
