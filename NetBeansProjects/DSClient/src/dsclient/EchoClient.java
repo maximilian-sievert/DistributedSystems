@@ -13,7 +13,7 @@ import org.apache.log4j.*;
  *
  * @author Maximilian This Class implements a CLI client to use as the frontend for (right now) establishing connections to the EchoServer
  */
-public class DSClient {
+public class EchoClient {
 
     private static DSConnection connection;
     private static Logger l4jlogger;
@@ -85,12 +85,13 @@ public class DSClient {
                     l4jlogger.info("Waiting for echo response from server... ");
                     byte[] response = connection.receive();
                     String resmessage = new String(response);
-                  
+
                     l4jlogger.info("... received response of length: " + response.length + " '" + resmessage + "'");
                 } catch (IOException ioex) {
                     l4jlogger.error("IO Error: " + ioex.getMessage()); //, ioex);
+                    //connection.disconnect();
                 } finally {
-                            
+
                 }
             } //CMD: logLevel
             else if (cmd.startsWith("logLevel ")) {

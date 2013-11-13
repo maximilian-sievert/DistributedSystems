@@ -1,9 +1,7 @@
 package client;
 
 import DistributedSystems.DSConnection;
-import common.messages.KVMessage;
-import common.messages.PutResponse;
-import common.messages.GetResponse;
+import common.messages.*;
 import common.messages.KVMessage.StatusType;
 import java.io.IOException;
 import java.util.logging.Level;
