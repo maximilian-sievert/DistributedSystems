@@ -58,9 +58,9 @@ public class DSConnection {
             m_bytes_received = 0;
 
             //Server send message on connection, so receive it...
-            byte[] server_welcome_message = this.receive();
+            //byte[] server_welcome_message = this.receive();
             //Possibly verify against expected value?
-            System.out.print(new String(server_welcome_message));
+            //System.out.print(new String(server_welcome_message));
         }
     }
 
@@ -121,7 +121,7 @@ public class DSConnection {
             throw new IOException("No connection established.");
         }
         InputStream s_in = m_Socket.getInputStream();
-        ArrayList<Byte> messagebuffer = new ArrayList<>();
+        ArrayList<Byte> messagebuffer = new ArrayList<Byte>();
 
         int val;
         while ((val = s_in.read()) != -1) { //-1 : end of stream (possibly network issue?)

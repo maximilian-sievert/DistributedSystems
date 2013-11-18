@@ -14,3 +14,7 @@ INFO - Supported commands:
 
 INFO - ... successfully disconnected.
 INFO - Application quit
+INFO - Connecting to host:localhost via port: 55555 (5 second timeout) ...
+ERROR - IO Error: Read timed out
+INFO - Attempting to disconnect...
+INFO - ... successfully disconnected.
