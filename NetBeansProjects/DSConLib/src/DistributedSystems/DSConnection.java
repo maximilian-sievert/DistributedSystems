@@ -87,7 +87,7 @@ public class DSConnection {
      * @param data Byte array of data to send. (Possibly add length sanity checks?)
      * @throws IOException No valid connection established or error during sending procedure.
      */
-    private static final int Server_MaxLength=128*1024; //128 kByte according to assignment pdf
+    private static final int Server_MaxLength = 128 * 1024; //128 kByte according to assignment pdf
 
     public void send(byte[] data) throws IOException {
         if (m_Socket == null || m_Socket.isClosed() || !m_Socket.isConnected()) {
@@ -98,7 +98,7 @@ public class DSConnection {
                 System.out.println("Message length exceeds server buffer, proceeding after trimming.");
                 byte[] trimdata = new byte[Server_MaxLength];
                 System.arraycopy(data, 0, trimdata, 0, trimdata.length);
-                data=trimdata;
+                data = trimdata;
             }
 
             s_out.write(data);
