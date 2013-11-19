@@ -4,8 +4,9 @@ import DistributedSystems.DSConnection;
 import common.messages.*;
 import common.messages.KVMessage.StatusType;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 public class KVStore implements KVCommInterface {
 
@@ -35,19 +36,19 @@ public class KVStore implements KVCommInterface {
         try {
             connection.disconnect();
         } catch (IOException ex) {
-            Logger.getLogger(KVStore.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getRootLogger().log(Level.ERROR, null, ex);
         }
     }
 
     private KVMessage sendreceive(StatusType status, String key, String value) throws IOException {
+        Logger logger = Logger.getRootLogger();
+
         KVBasicMessage m = new KVBasicMessage(key, value, status);
-        Logger.getLogger(KVStore.class.getName()).log(Level.INFO, "KVStore >> {0}", m.toString());
+        logger.log(Level.DEBUG, "KVStore >> "+m.toString());
         byte[] data = m.GetData();
         connection.send(data);
-
-        //Logger.getLogger(KVStore.class.getName()).log(Level.INFO, "KVStore waiting for message...");
         KVBasicMessage r = new KVBasicMessage(connection.receive());
-        Logger.getLogger(KVStore.class.getName()).log(Level.INFO, "KVStore << {0}", r.toString());
+        logger.log(Level.DEBUG, "KVStore << "+r.toString());
         return r;
     }
 

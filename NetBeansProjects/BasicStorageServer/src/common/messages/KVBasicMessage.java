@@ -62,7 +62,7 @@ public class KVBasicMessage implements KVMessage {
     }
 
     @Override
-    public String toString(){
-        return "kvbm[ "+this.status.toString()+": "+(this.key==null?"null":this.key)+" = "+(this.value==null?"NULL":"'"+this.value+"'")+"]";
+    public String toString() {
+        return "kvbm[ " + this.status.toString() + ": " + (this.key == null ? "null" : this.key) + " = " + (this.value == null ? "NULL" : "'" + this.value + "'") + "]";
     }
 }

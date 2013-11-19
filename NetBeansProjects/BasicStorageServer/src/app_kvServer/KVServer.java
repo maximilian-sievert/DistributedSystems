@@ -5,14 +5,16 @@ import common.messages.KVMessage;
 import common.messages.KVBasicMessage;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import logger.LogSetup;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 public class KVServer {
 
-    private final int num_threads = 10;
-    private final Thread[] threads = new Thread[num_threads];
+    public static final Logger logger = Logger.getRootLogger();
     private final ConcurrentHashMap<String, String> local_hashmap = new ConcurrentHashMap<String, String>();
 
     private boolean shutdown_requested = false;
@@ -23,6 +25,11 @@ public class KVServer {
 
     public void RequestShutdown() {
         this.shutdown_requested = true;
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            logger.error("Error! Unable to close socket on port: " + port, e);
+        }
     }
     private final int port;
 
@@ -47,16 +54,15 @@ public class KVServer {
     }
 
     public void runServer() {
-        for (int i = 0; i < num_threads; i++) {
-            (threads[i] = new Thread(new ServerThread(this))).start();
-            threads[i].setName("ServerWorker " + i);
-        }
-        try {
-            for (Thread t : threads) {
-                t.join();
+        while (!isShutdownRequested()) {
+            try {
+                Socket client = serverSocket.accept();
+                new Thread(new ServerThread(this, client)).start();
+
+                logger.info("Connected to " + client.getInetAddress().getHostName() + " on port " + client.getPort());
+            } catch (IOException e) {
+                logger.error("Error! Unable to establish connection. \n", e);
             }
-        } catch (InterruptedException ex) {
-            Logger.getLogger(KVServer.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -84,38 +90,50 @@ public class KVServer {
     }
 
     public static void main(String[] args) throws IOException {
+        LogSetup logSetup = new LogSetup("logs/server.log", Level.INFO);
+
+        //Set up server
         final KVServer sv = new KVServer(55555);
-        Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "Server initialized.");
+        KVServer.logger.log(Level.INFO, "Server initialized.");
+        //Start server in its own thread.
         (new Thread() {
             @Override
             public void run() {
-                Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "Server starting in its thread...");
+                KVServer.logger.log(Level.INFO, "Server starting in its thread...");
                 sv.runServer();
             }
         }).start();
+
+        //Set up a store, connect and put/get a bit, disconnect, repeat a couple of times.
         try {
             KVStore mystore = new KVStore("localhost", 55555);
-            Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "KVStore initialized.");
-            for (int i = 0; i < 10; i++) {
+            KVServer.logger.log(Level.INFO, "KVStore initialized.");
+            for (int client = 0; client < 10; client++) {
                 mystore.connect();
-                Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "KVStore connected.");
-                for (int k = 0; k < 10; k++) {
-                    mystore.put("k" + k, "v" + k + "_"+i);
-                    mystore.put("k" + k, "v" + k + "-"+i);
+                KVServer.logger.log(Level.INFO, "KVStore connected.");
+                for (int request = 0; request < 10; request++) {
+                    mystore.put("req_" + request, "req_" + request + " client " + client);
+                    mystore.put("req_" + request, "req_" + request + " client update " + client);
                     //maybe sleep, run multithreaded clients
-                    String kv = mystore.get("k" + k).getValue();
-                    if(!kv.equals("v" + k + "-"+i)){ //should be 
-                        Logger.getLogger(ServerThread.class.getName()).log(Level.SEVERE, "[ERROR] KVStore missmatch: {0}: {1}!={2}", new Object[]{k, kv,"v" + k + "-"+i});
+                    String kv = mystore.get("req_" + request).getValue();
+                    if (!kv.equals("req_" + request + " client update " + client)) { //should be
+                        KVServer.logger.log(Level.ERROR, "[ERROR] KVStore missmatch: " + request + ": " + kv + "!=" + request + "-" + client);
                     }
                 }
                 mystore.disconnect();
-                Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "KVStore disconnected.");
+                KVServer.logger.log(Level.INFO, "KVStore disconnected.");
             }
-        } catch (InterruptedException ex) {
-            Logger.getLogger(KVServer.class.getName()).log(Level.SEVERE, null, ex);
         } catch (Exception ex) {
-            Logger.getLogger(KVServer.class.getName()).log(Level.SEVERE, null, ex);
+            KVServer.logger.log(Level.ERROR, null, ex);
         }
-        sv.RequestShutdown();
+
+        //Wait 10 seconds then shut the server down.
+        try {
+            Thread.sleep(10000);
+            sv.RequestShutdown();
+        } catch (InterruptedException ex) {
+            KVServer.logger.log(Level.ERROR, null, ex);
+        }
+
     }
 }

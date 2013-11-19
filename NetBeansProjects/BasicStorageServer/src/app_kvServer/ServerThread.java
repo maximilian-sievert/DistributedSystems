@@ -14,8 +14,8 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Level;
 
 /**
  *
@@ -24,14 +24,17 @@ import java.util.logging.Logger;
 public class ServerThread implements Runnable {
 
     private final KVServer parentserver;
+    private final Socket client;
 
-    public ServerThread(KVServer p) {
+    public ServerThread(KVServer p, Socket clientSocket) {
         this.parentserver = p;
+        this.client = clientSocket;
     }
 
-    public void handlesession(Socket clientSocket) throws IOException, SocketException{
-        while(clientSocket.isConnected()){
-            InputStream cl_in = clientSocket.getInputStream();
+    public void handlesession(Socket clientSocket) throws IOException, SocketException {
+        InputStream cl_in = clientSocket.getInputStream();
+        OutputStream cl_out = clientSocket.getOutputStream();
+        while (clientSocket.isConnected() && !this.parentserver.isShutdownRequested()) {
 
             ArrayList<Byte> messagebuffer = new ArrayList<Byte>();
             int val;
@@ -42,7 +45,7 @@ public class ServerThread implements Runnable {
                     messagebuffer.add((byte) val);
                 }
             }
-            if(val==-1){ //Socket connection has been lost, so we presumably cannot send an answer.
+            if (val == -1) { //Socket connection has been lost, so we presumably cannot send an answer.
                 throw new SocketException("Socket connection to client has been lost, ready to accept further connections...");
             }
             byte[] data = new byte[messagebuffer.size()];
@@ -52,28 +55,24 @@ public class ServerThread implements Runnable {
 
             //handle packet
             KVBasicMessage request = new KVBasicMessage(data);
-            Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "Serverthread << {0}", request.toString());
+            KVServer.logger.log(Level.DEBUG, "Serverthread << " + request.toString());
             KVBasicMessage response = processMessage(request);
-            Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "Serverthread >> {0}", response.toString());
+            KVServer.logger.log(Level.DEBUG, "Serverthread >> " + response.toString());
             //send response
-            OutputStream cl_out = clientSocket.getOutputStream();
             cl_out.write(response.GetData());
             cl_out.write((byte) 13); //Packet delimiter
             cl_out.flush();
         }
     }
+
     @Override
     public void run() {
-        //service loop
-        while (!this.parentserver.isShutdownRequested()) {
-            try {
-                Socket clientSocket = this.parentserver.getServerSocket().accept();
-                handlesession(clientSocket); //This loops until the socket is lost.
-            } catch (SocketException soex) {
-                Logger.getLogger(ServerThread.class.getName()).log(Level.INFO, "Socket has been disconnected.");
-            } catch (IOException ioex) {
-                Logger.getLogger(ServerThread.class.getName()).log(Level.SEVERE, null, ioex);
-            }
+        try {
+            handlesession(this.client); //This loops until the socket is lost.
+        } catch (SocketException soex) {
+            KVServer.logger.log(Level.DEBUG, "Socket has been disconnected.");
+        } catch (IOException ioex) {
+            KVServer.logger.log(Level.ERROR, null, ioex);
         }
     }
 
