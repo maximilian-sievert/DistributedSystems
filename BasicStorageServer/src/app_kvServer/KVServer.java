@@ -1,6 +1,5 @@
 package app_kvServer;
 
-import client.KVStore;
 import common.messages.KVMessage;
 import common.messages.KVBasicMessage;
 import java.io.IOException;
@@ -90,50 +89,32 @@ public class KVServer {
     }
 
     public static void main(String[] args) throws IOException {
-        LogSetup logSetup = new LogSetup("logs/server.log", Level.INFO);
-
-        //Set up server
-        final KVServer sv = new KVServer(55555);
-        KVServer.logger.log(Level.INFO, "Server initialized.");
-        //Start server in its own thread.
-        (new Thread() {
-            @Override
-            public void run() {
-                KVServer.logger.log(Level.INFO, "Server starting in its thread...");
-                sv.runServer();
-            }
-        }).start();
-
-        //Set up a store, connect and put/get a bit, disconnect, repeat a couple of times.
+        //args=new String[]{"50000"};
         try {
-            KVStore mystore = new KVStore("localhost", 55555);
-            KVServer.logger.log(Level.INFO, "KVStore initialized.");
-            for (int client = 0; client < 10; client++) {
-                mystore.connect();
-                KVServer.logger.log(Level.INFO, "KVStore connected.");
-                for (int request = 0; request < 10; request++) {
-                    mystore.put("req_" + request, "req_" + request + " client " + client);
-                    mystore.put("req_" + request, "req_" + request + " client update " + client);
-                    //maybe sleep, run multithreaded clients
-                    String kv = mystore.get("req_" + request).getValue();
-                    if (!kv.equals("req_" + request + " client update " + client)) { //should be
-                        KVServer.logger.log(Level.ERROR, "[ERROR] KVStore missmatch: " + request + ": " + kv + "!=" + request + "-" + client);
+            LogSetup logSetup = new LogSetup("logs/server.log", Level.ALL);
+            if (args.length != 1) {
+                System.out.println("Error! Invalid number of arguments!");
+                System.out.println("Usage: Server <port>!");
+            } else {
+                int port = Integer.parseInt(args[0]);
+                System.out.println("Starting Server thread using port !"+port);
+                final KVServer sv = new KVServer(port);
+                (new Thread() {
+                    @Override
+                    public void run() {
+                        System.out.println("Running server...");
+                        sv.runServer();
                     }
-                }
-                mystore.disconnect();
-                KVServer.logger.log(Level.INFO, "KVStore disconnected.");
+                }).start();
             }
-        } catch (Exception ex) {
-            KVServer.logger.log(Level.ERROR, null, ex);
+        } catch (IOException e) {
+            System.out.println("Error! Unable to initialize logger!");
+            e.printStackTrace();
+            System.exit(1);
+        } catch (NumberFormatException nfe) {
+            System.out.println("Error! Invalid argument <port>! Not a number!");
+            System.out.println("Usage: Server <port>!");
+            System.exit(1);
         }
-
-        //Wait 10 seconds then shut the server down.
-        try {
-            Thread.sleep(10000);
-            sv.RequestShutdown();
-        } catch (InterruptedException ex) {
-            KVServer.logger.log(Level.ERROR, null, ex);
-        }
-
     }
 }
